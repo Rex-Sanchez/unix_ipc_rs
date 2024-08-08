@@ -5,7 +5,7 @@ use std::{
 };
 
 use serde::{de::DeserializeOwned, Serialize};
-mod error;
+pub mod error;
 pub use crate::error::Result;
 
 pub struct IPCSocket {
@@ -46,12 +46,13 @@ impl IPCSocket {
         };
         Ok(Some(()))
     }
+
     // Receive a message this is non blocking and returns a Result<Option<T>> where T is the Type
     // of the message, if there is no error then and contains a message it will give you a Some(T),
     // when it does not contain a message it will return a None,
     pub fn recv<T: DeserializeOwned>(&mut self) -> Result<Option<T>> {
         let mut buf = [0u8; 4];
-
+ 
         if self.receive_data(&mut buf)?.is_none() {
             return Ok(None);
         }
