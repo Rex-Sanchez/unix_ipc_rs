@@ -5,11 +5,8 @@ use std::{
 };
 
 use serde::{de::DeserializeOwned, Serialize};
-
 mod error;
-
 pub use crate::error::Result;
-
 
 pub struct IPCSocket {
     socket: UnixStream,
@@ -18,6 +15,7 @@ pub struct IPCSocket {
 }
 
 impl IPCSocket {
+    /// Use this constructor to create a server instance
     pub fn new_server(addr: &'static str) -> Result<Self> {
         let listener = UnixListener::bind(addr)?;
         let (socket, _) = listener.accept()?;
@@ -28,6 +26,7 @@ impl IPCSocket {
         })
     }
 
+    /// Use this constructor to create a client instance
     pub fn new_client(addr: &'static str) -> Result<Self> {
         let socket = UnixStream::connect(addr)?;
         Ok(Self {
@@ -47,6 +46,9 @@ impl IPCSocket {
         };
         Ok(Some(()))
     }
+    // Receive a message this is non blocking and returns a Result<Option<T>> where T is the Type
+    // of the message, if there is no error then and contains a message it will give you a Some(T),
+    // when it does not contain a message it will return a None,
     pub fn recv<T: DeserializeOwned>(&mut self) -> Result<Option<T>> {
         let mut buf = [0u8; 4];
 
@@ -65,6 +67,8 @@ impl IPCSocket {
         return Ok(Some(message));
     }
 
+    /// Receive a message, this method is blocking and will only return if a message is received,
+    /// or error out when there is a error;
     pub fn recv_blocking<T: DeserializeOwned>(&mut self) -> Result<T> {
         loop {
             if let Some(message) = self.recv()? {
@@ -73,6 +77,8 @@ impl IPCSocket {
         }
     }
 
+    /// Send a message Returns OK(()) when everything was successfull or a Err(E) when there was a
+    /// error;
     pub fn send<T: Serialize>(&mut self, message: T) -> Result<()> {
         let message = bincode::serialize(&message)?;
         let message_len = message.len();
@@ -82,17 +88,20 @@ impl IPCSocket {
 
         Ok(())
     }
+
+    /// Disconnect from the socket.
+    /// when its a server it will remove the socket as well;
     pub fn disconnect(&mut self) {
         self.socket.shutdown(std::net::Shutdown::Both).ok();
+        if !self.is_client {
+            remove_file(self.addr).ok();
+        }
     }
 }
 
 impl Drop for IPCSocket {
     fn drop(&mut self) {
         self.disconnect();
-        if !self.is_client {
-            remove_file(self.addr).ok();
-        }
     }
 }
 
