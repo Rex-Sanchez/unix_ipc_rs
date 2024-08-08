@@ -20,6 +20,7 @@ impl SocketServer {
         let listener = UnixListener::bind(addr)?;
         let (socket, _) = listener.accept()?;
 
+        // some comment
         Ok(Self { socket, addr })
     }
     pub fn recv<T: DeserializeOwned>(&mut self) -> Option<T> {
