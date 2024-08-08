@@ -24,12 +24,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
 
     let s = spawn(|| {
         // Create a server instance of a socket;
-        let mut server = SocketServer::new("/tmp/test_socket.sock").unwrap();
+        let mut server = IPCSocket::new_server("/tmp/test_socket.sock").unwrap();
 
         // Loop to receive messages
         loop {
             // This function will not block and will give a Some with the message when it has received a message, else it will return a None
-            if let Some(message) = server.recv::<TestMessage>() {
+            if let Some(message) = server.recv::<TestMessage>()? {
 
                 dbg!(&message);
 
@@ -50,7 +50,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
     
     let c = spawn(|| {
         // Create a client instance
-        let mut client = SocketClient::new("/tmp/test_socket.sock").unwrap();
+        let mut client = IPCSocket::new_client("/tmp/test_socket.sock").unwrap();
 
         //  Send a message to the server;  
         let message = client.send(TestMessage {
@@ -58,7 +58,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>>{
         });
 
         // Receive a message this function is blocking will return a message when it is received
-        let message = client.recv_blocking::<TestMessage>();
+        let message = client.recv_blocking::<TestMessage>()?;
 
         dbg!(message);
     });
