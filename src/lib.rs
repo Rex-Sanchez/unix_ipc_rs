@@ -10,27 +10,36 @@ mod error;
 
 pub use crate::error::Result;
 
+
 pub struct IPCSocket {
     socket: UnixStream,
     addr: &'static str,
+    is_client: bool,
 }
 
 impl IPCSocket {
     pub fn new_server(addr: &'static str) -> Result<Self> {
         let listener = UnixListener::bind(addr)?;
         let (socket, _) = listener.accept()?;
-        Ok(Self { socket, addr })
+        Ok(Self {
+            socket,
+            addr,
+            is_client: false,
+        })
     }
 
     pub fn new_client(addr: &'static str) -> Result<Self> {
         let socket = UnixStream::connect(addr)?;
-        Ok(Self { socket, addr })
+        Ok(Self {
+            socket,
+            addr,
+            is_client: true,
+        })
     }
 
     fn receive_data(&mut self, buffer: &mut [u8]) -> Result<Option<()>> {
         if let Err(e) = self.socket.read_exact(buffer) {
             if e.kind() == std::io::ErrorKind::UnexpectedEof {
-                // if the buffer is filled with 0x00 return a Ok(None);
                 return Ok(None);
             } else {
                 return Err(e.into());
@@ -65,34 +74,32 @@ impl IPCSocket {
     }
 
     pub fn send<T: Serialize>(&mut self, message: T) -> Result<()> {
-        // encode message;
         let message = bincode::serialize(&message)?;
-        // get len of message;
         let message_len = message.len();
 
-        // send len of message;
         self.socket.write_all(&message_len.to_be_bytes())?;
-        // send message;
         self.socket.write_all(&message)?;
 
         Ok(())
     }
-    
+    pub fn disconnect(&mut self) {
+        self.socket.shutdown(std::net::Shutdown::Both).ok();
+    }
 }
 
 impl Drop for IPCSocket {
     fn drop(&mut self) {
-        self.socket.shutdown(std::net::Shutdown::Both).ok();
-        remove_file(self.addr).ok();
+        self.disconnect();
+        if !self.is_client {
+            remove_file(self.addr).ok();
+        }
     }
 }
 
-
-
 #[cfg(test)]
 mod test {
-    use std::thread::spawn;
     use crate::IPCSocket;
+    use std::thread::spawn;
 
     #[test]
     fn t1() {
