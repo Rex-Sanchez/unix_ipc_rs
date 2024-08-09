@@ -1,7 +1,11 @@
+#![allow(unused)]
 use std::{
+    collections::HashMap,
     fs::remove_file,
     io::{Read, Write},
     os::unix::net::{UnixListener, UnixStream},
+    sync::{Arc, Mutex},
+    thread::spawn,
 };
 
 use serde::{de::DeserializeOwned, Serialize};
@@ -52,16 +56,32 @@ impl IPCSocket {
     // when it does not contain a message it will return a None,
     pub fn recv<T: DeserializeOwned>(&mut self) -> Result<Option<T>> {
         let mut buf = [0u8; 4];
- 
-        if self.receive_data(&mut buf)?.is_none() {
-            return Ok(None);
-        }
+
+        //  if self.receive_data(&mut buf)?.is_none() {
+        //      return Ok(None);
+        //  }
+
+        if let Err(e) = self.socket.read_exact(&mut buf) {
+            if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                return Ok(None);
+            } else {
+                return Err(e.into());
+            }
+        };
 
         let mut message_buf = vec![0u8; u32::from_be_bytes(buf) as usize];
 
-        if self.receive_data(&mut message_buf)?.is_none() {
-            return Ok(None);
-        }
+        if let Err(e) = self.socket.read_exact(&mut message_buf) {
+            if e.kind() == std::io::ErrorKind::UnexpectedEof {
+                return Ok(None);
+            } else {
+                return Err(e.into());
+            }
+        };
+
+        //        if self.receive_data(&mut message_buf)?.is_none() {
+        //            return Ok(None);
+        //        }
 
         let message = bincode::deserialize::<T>(&message_buf)?;
 
