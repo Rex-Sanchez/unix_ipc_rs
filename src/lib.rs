@@ -83,6 +83,8 @@ impl IPCSocket {
         //            return Ok(None);
         //        }
 
+        dbg!(&message_buf);
+
         let message = bincode::deserialize::<T>(&message_buf)?;
 
         return Ok(Some(message));
