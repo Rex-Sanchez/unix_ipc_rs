@@ -39,7 +39,7 @@ impl IPCSocket {
     }
     fn set_permissions(addr: &str) -> Result<()> {
         let mut perm = fs::metadata(addr)?.permissions();
-        perm.set_mode(0o777);
+        perm.set_mode(0o666);
         fs::set_permissions(addr, perm);
         Ok(())
     }
