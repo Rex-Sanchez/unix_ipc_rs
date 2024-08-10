@@ -1,9 +1,12 @@
 #![allow(unused)]
 use std::{
     collections::HashMap,
-    fs::remove_file,
+    fs::{self, remove_file},
     io::{Read, Write},
-    os::unix::net::{UnixListener, UnixStream},
+    os::unix::{
+        fs::PermissionsExt,
+        net::{UnixListener, UnixStream},
+    },
     sync::{Arc, Mutex},
     thread::spawn,
 };
@@ -23,12 +26,21 @@ impl IPCSocket {
     pub fn new_server(addr: &'static str) -> Result<Self> {
         remove_file(addr).ok();
         let listener = UnixListener::bind(addr)?;
+
+        Self::set_permissions(&addr);
+
         let (socket, _) = listener.accept()?;
         Ok(Self {
             socket,
             addr,
             is_client: false,
         })
+    }
+    fn set_permissions(addr: &str) -> Result<()> {
+        let mut perm = fs::metadata(addr)?.permissions();
+        perm.set_mode(0o777);
+        fs::set_permissions(addr, perm);
+        Ok(())
     }
     pub fn is_client_connected(&mut self) -> bool {
         let mut buf = [0u8; 8];
@@ -45,6 +57,9 @@ impl IPCSocket {
     pub fn reconnect(&mut self) -> Result<()> {
         self.disconnect();
         let listener = UnixListener::bind(self.addr)?;
+        
+        Self::set_permissions(self.addr);
+
         let (socket, _) = listener.accept()?;
         self.socket = socket;
         Ok(())
