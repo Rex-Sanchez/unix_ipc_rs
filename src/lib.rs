@@ -21,6 +21,7 @@ pub struct IPCSocket {
 impl IPCSocket {
     /// Use this constructor to create a server instance
     pub fn new_server(addr: &'static str) -> Result<Self> {
+        remove_file(addr).ok();
         let listener = UnixListener::bind(addr)?;
         let (socket, _) = listener.accept()?;
         Ok(Self {
@@ -30,8 +31,13 @@ impl IPCSocket {
         })
     }
     pub fn is_client_connected(&mut self) -> bool {
-        dbg!(self.socket.peer_addr());
-        self.socket.peer_addr().ok().is_some()
+        let mut buf = [0u8;8];
+        if let Ok(v) = self.socket.read(&mut buf){
+            if v == 0 {
+                return false
+            }
+        }
+        true
     }
     pub fn reconnect(&mut self) -> Result<()> {
         self.disconnect();
