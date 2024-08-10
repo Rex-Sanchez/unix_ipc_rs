@@ -29,6 +29,15 @@ impl IPCSocket {
             is_client: false,
         })
     }
+    pub fn is_client_connected(&mut self) -> bool {
+        !self.socket.peer_addr().ok().is_some()
+    }
+    pub fn reconnect(&mut self) -> Result<()> {
+        let listener = UnixListener::bind(self.addr)?;
+        let (socket, _) = listener.accept()?;
+        self.socket = socket;
+        Ok(())
+    }
 
     /// Use this constructor to create a client instance
     pub fn new_client(addr: &'static str) -> Result<Self> {
@@ -64,7 +73,6 @@ impl IPCSocket {
         if buf.len() == 0 {
             return Ok(None);
         }
-
 
         let mut message_buf = vec![0u8; u32::from_be_bytes(buf) as usize];
 
