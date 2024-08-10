@@ -31,12 +31,15 @@ impl IPCSocket {
         })
     }
     pub fn is_client_connected(&mut self) -> bool {
-        let mut buf = [0u8;8];
-        if let Ok(v) = self.socket.read(&mut buf){
+        let mut buf = [0u8; 8];
+        self.socket.set_nonblocking(true);
+        if let Ok(v) = self.socket.read(&mut buf) {
             if v == 0 {
-                return false
+                self.socket.set_nonblocking(false);
+                return false;
             }
         }
+        self.socket.set_nonblocking(false);
         true
     }
     pub fn reconnect(&mut self) -> Result<()> {
