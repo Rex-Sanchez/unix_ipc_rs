@@ -30,6 +30,7 @@ impl IPCSocket {
         })
     }
     pub fn is_client_connected(&mut self) -> bool {
+        dbg!(self.socket.peer_addr());
         self.socket.peer_addr().ok().is_some()
     }
     pub fn reconnect(&mut self) -> Result<()> {
