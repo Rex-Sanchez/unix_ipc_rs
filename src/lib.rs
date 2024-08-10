@@ -30,6 +30,7 @@ impl IPCSocket {
         Self::set_permissions(&addr);
 
         let (socket, _) = listener.accept()?;
+
         Ok(Self {
             socket,
             addr,
