@@ -33,6 +33,7 @@ impl IPCSocket {
         !self.socket.peer_addr().ok().is_some()
     }
     pub fn reconnect(&mut self) -> Result<()> {
+        self.disconnect();
         let listener = UnixListener::bind(self.addr)?;
         let (socket, _) = listener.accept()?;
         self.socket = socket;
